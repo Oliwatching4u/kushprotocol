@@ -277,8 +277,15 @@ h1 {
 </div>
 
 <script>
-const WS_URL = "wss://${location.host}/ws";
+
+const proto = location.protocol === "https:" ? "wss" : "ws";
+const WS_URL = `${proto}://${location.host}/ws`;
+
+console.log("WS_URL =", WS_URL);
+
 const ws = new WebSocket(WS_URL);
+
+
 
 const holdersGrid = document.getElementById("holdersGrid");
 const winnersList = document.getElementById("winnersList");
