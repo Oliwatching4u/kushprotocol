@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>$KUSH Rewards Protocol</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background:#0A0B0D;
+  color:#E5E7EB;
+  min-height:100vh;
+  overflow-x:hidden;
+  position:relative;
+}
+
+body::before {
+  content:'';
+  position:fixed;
+  inset:0;
+  background:
+    radial-gradient(circle at 20% 50%, rgba(139,92,246,.15), transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(59,130,246,.15), transparent 50%);
+  pointer-events:none;
+  z-index:0;
+}
+
+.container {
+  display:grid;
+  grid-template-columns:1fr 380px;
+  gap:24px;
+  padding:24px;
+  max-width:1920px;
+  margin:0 auto;
+  position:relative;
+  z-index:1;
+}
+
+header {
+  grid-column:1/-1;
+  padding:48px 56px;
+  background:rgba(17,24,39,.6);
+  backdrop-filter:blur(20px);
+  border-radius:24px;
+  border:1px solid rgba(139,92,246,.2);
+  box-shadow:0 8px 32px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.05);
+}
+
+h1 {
+  font-size:3.5rem;
+  font-weight:700;
+  letter-spacing:-.03em;
+  background:linear-gradient(135deg,#8B5CF6,#3B82F6,#06B6D4);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  margin-bottom:8px;
+}
+
+.subtitle { font-size:1.125rem; color:#9CA3AF; }
+
+.stats {
+  display:flex;
+  gap:24px;
+  margin-top:40px;
+  flex-wrap:wrap;
+}
+
+.stat-item {
+  flex:1;
+  min-width:220px;
+  background:rgba(31,41,55,.5);
+  backdrop-filter:blur(10px);
+  padding:28px;
+  border-radius:16px;
+  border:1px solid rgba(139,92,246,.15);
+}
+
+.stat-label {
+  font-size:.875rem;
+  color:#6B7280;
+  text-transform:uppercase;
+  letter-spacing:.1em;
+  margin-bottom:12px;
+}
+
+.stat-value {
+  font-size:2.5rem;
+  font-weight:700;
+  font-family:'Space Mono', monospace;
+  background:linear-gradient(135deg,#8B5CF6,#3B82F6);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+
+.stat-value.long {
+  font-size:1.05rem;
+  background:none;
+  -webkit-text-fill-color:#E5E7EB;
+  word-break:break-all;
+}
+
+.progress-container { margin-top:16px; }
+.progress-bar {
+  width:100%; height:8px;
+  background:rgba(31,41,55,.8);
+  border-radius:10px; overflow:hidden;
+}
+.progress-fill {
+  height:100%;
+  background:linear-gradient(90deg,#8B5CF6,#3B82F6,#06B6D4);
+  transition:width 0.25s linear;
+}
+
+.holders-section {
+  background:rgba(17,24,39,.6);
+  backdrop-filter:blur(20px);
+  border-radius:24px;
+  padding:32px;
+  border:1px solid rgba(139,92,246,.2);
+}
+
+.section-title { font-size:1.5rem; margin-bottom:28px; }
+
+.holders-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+  gap:20px;
+  max-height:calc(100vh - 380px);
+  overflow-y:auto;
+
+  /* ✅ фикс: скролл не лип к карточкам */
+  padding-right: 14px;
+}
+
+.holder-card {
+  background:rgba(31,41,55,.5);
+  border:1px solid rgba(107,114,128,.2);
+  border-radius:16px;
+  padding:24px;
+  transition: box-shadow .25s ease, border-color .25s ease;
+}
+
+.holder-card.winner {
+  border:2px solid rgba(250,204,21,.95);
+  box-shadow:0 0 24px rgba(250,204,21,.55);
+}
+
+.holder-label {
+  font-size:.75rem;
+  color:#6B7280;
+  text-transform:uppercase;
+  letter-spacing:.1em;
+  margin-bottom:8px;
+}
+
+.address {
+  font-family:'Space Mono', monospace;
+  color:#8B5CF6;
+  margin-bottom:12px;
+}
+
+.balance {
+  font-family:'Space Mono', monospace;
+  font-size:1.5rem;
+}
+
+.winners-sidebar {
+  background:rgba(17,24,39,.6);
+  backdrop-filter:blur(20px);
+  border-radius:24px;
+  padding:32px;
+  border:1px solid rgba(139,92,246,.2);
+  max-height:calc(100vh - 380px);
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+}
+
+#winnersList {
+  overflow-y:auto;
+  padding-right: 10px;
+}
+
+.winner-item {
+  background:linear-gradient(135deg,rgba(139,92,246,.15),rgba(59,130,246,.1));
+  border-left:3px solid #8B5CF6;
+  padding:20px;
+  border-radius:12px;
+  margin-bottom:12px;
+}
+
+.winner-round {
+  font-size:.75rem;
+  color:#6B7280;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  margin-bottom:8px;
+}
+
+.winner-address {
+  font-family:'Space Mono', monospace;
+  color:#8B5CF6;
+  word-break:break-all;
+}
+
+.holders-grid::-webkit-scrollbar,
+#winnersList::-webkit-scrollbar { width: 6px; }
+
+.holders-grid::-webkit-scrollbar-track,
+#winnersList::-webkit-scrollbar-track { background: transparent; }
+
+.holders-grid::-webkit-scrollbar-thumb,
+#winnersList::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(139,92,246,.8), rgba(59,130,246,.8));
+  border-radius: 10px;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<header>
+  <h1>$KUSH Rewards Protocol</h1>
+  <p class="subtitle">Live on-chain lottery</p>
+
+  <div class="stats">
+    <div class="stat-item">
+      <div class="stat-label">Current Round</div>
+      <div class="stat-value" id="roundNumber">—</div>
+    </div>
+
+    <div class="stat-item">
+      <div class="stat-label">Next Distribution</div>
+      <div class="stat-value" id="timer">—</div>
+      <div class="progress-container">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-item">
+      <div class="stat-label">Total Holders</div>
+      <div class="stat-value" id="holderCount">—</div>
+    </div>
+
+    <div class="stat-item">
+      <div class="stat-label">DEV WALLET</div>
+      <div class="stat-value long" id="devWalletValue">—</div>
+    </div>
+
+    <div class="stat-item">
+      <div class="stat-label">CA</div>
+      <div class="stat-value long" id="caValue">—</div>
+    </div>
+  </div>
+</header>
+
+<div class="holders-section">
+  <h2 class="section-title">Token Holders</h2>
+  <div class="holders-grid" id="holdersGrid"></div>
+</div>
+
+<div class="winners-sidebar">
+  <h2 class="section-title">Recent Winners</h2>
+  <div id="winnersList"></div>
+</div>
+
+</div>
+
+<script>
+const WS_URL = "wss://${location.host}/ws";
+const ws = new WebSocket(WS_URL);
+
+const holdersGrid = document.getElementById("holdersGrid");
+const winnersList = document.getElementById("winnersList");
+const holderCards = new Map();
+
+let roundDuration = 15;
+
+// ✅ чтобы подсветка срабатывала строго 1 раз на draw
+let lastDrawId = 0;
+
+ws.onopen = () => {
+  // keepalive ping
+  setInterval(() => {
+    try { ws.send("ping"); } catch(e) {}
+  }, 5000);
+};
+
+ws.onmessage = (e) => {
+  const data = JSON.parse(e.data);
+
+  roundDuration = data.round_duration || roundDuration;
+
+  document.getElementById("roundNumber").textContent = data.round;
+  document.getElementById("timer").textContent = formatMMSS(data.time_left);
+  document.getElementById("holderCount").textContent = data.holders.length;
+  document.getElementById("devWalletValue").textContent = data.dev_wallet || "—";
+  document.getElementById("caValue").textContent = data.ca || "—";
+
+  updateProgress(data.time_left, roundDuration);
+  renderHolders(data.holders);
+  renderWinners(data.winners);
+
+  // ✅ подсветка победителей — ровно 1 раз по draw_id
+  if (data.draw_id && data.draw_id !== lastDrawId) {
+    lastDrawId = data.draw_id;
+    if (Array.isArray(data.draw_addresses)) {
+      highlightWinners(data.draw_addresses);
+    }
+  }
+};
+
+function formatMMSS(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+}
+
+function updateProgress(timeLeft, total) {
+  const percent = ((total - timeLeft) / total) * 100;
+  document.getElementById("progressFill").style.width = Math.max(0, Math.min(100, percent)) + "%";
+}
+
+function renderHolders(holders) {
+  const seen = new Set();
+
+  holders.forEach(h => {
+    seen.add(h.address);
+
+    if (!holderCards.has(h.address)) {
+      const card = document.createElement("div");
+      card.className = "holder-card";
+      card.setAttribute("data-addr", h.address);
+
+      card.innerHTML = `
+        <div class="holder-label">Wallet Address</div>
+        <div class="address">${h.address.slice(0,4)}...${h.address.slice(-4)}</div>
+        <div class="holder-label">Token Balance</div>
+        <div class="balance">${Number(h.balance || 0).toFixed(0)}</div>
+      `;
+
+      holdersGrid.appendChild(card);
+      holderCards.set(h.address, card);
+    } else {
+      const card = holderCards.get(h.address);
+      const bal = card.querySelector(".balance");
+      const next = Number(h.balance || 0).toFixed(0);
+      if (bal && bal.textContent !== next) bal.textContent = next;
+    }
+  });
+
+  // remove missing
+  holderCards.forEach((card, addr) => {
+    if (!seen.has(addr)) {
+      card.remove();
+      holderCards.delete(addr);
+    }
+  });
+}
+
+function renderWinners(winners) {
+  winnersList.innerHTML = "";
+  winners.forEach(w => {
+    const item = document.createElement("div");
+    item.className = "winner-item";
+    item.innerHTML = `
+      <div class="winner-round">Round #${w.round}</div>
+      <div class="winner-address">${w.address}</div>
+    `;
+    winnersList.appendChild(item);
+  });
+}
+
+function highlightWinners(addresses) {
+  addresses.forEach((addr, i) => {
+    const card = holderCards.get(addr);
+    if (!card) return;
+
+    setTimeout(() => {
+      card.classList.add("winner");
+      setTimeout(() => card.classList.remove("winner"), 4000);
+    }, i * 150);
+  });
+}
+</script>
+</body>
+</html>

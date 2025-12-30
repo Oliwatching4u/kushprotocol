@@ -1,8 +1,12 @@
 import asyncio
 import json
 import random
+import time
 from pathlib import Path
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 # === IMPORTS FROM YOUR holders_snapshot.py ===
 from holders_snapshot import (
@@ -13,8 +17,14 @@ from holders_snapshot import (
     TOKEN_2022_PROGRAM,
 )
 
-CONFIG_PATH = Path("config.json")
-EXCLUDE_PATH = Path("exclude_addresses.json")
+# ---------------- Paths ----------------
+BASE_DIR = Path(__file__).resolve().parent  # /backend
+CONFIG_PATH = BASE_DIR / "config.json"
+EXCLUDE_PATH = BASE_DIR / "exclude_addresses.json"
+
+# фронт должен лежать тут: backend/frontend/index.html
+FRONTEND_DIR = BASE_DIR / "frontend"
+INDEX_HTML = FRONTEND_DIR / "index.html"
 
 app = FastAPI()
 clients: set[WebSocket] = set()
@@ -35,7 +45,39 @@ decimals: int = 0
 ROUND_DURATION: int = 15
 SNAPSHOT_INTERVAL: float = 0.2
 
+# анти-429/backoff
+_snapshot_backoff_sec: float = 0.0
+_snapshot_backoff_max: float = 30.0
 
+# ---------------- Frontend serving ----------------
+# отдаём index.html по /
+@app.get("/")
+async def root():
+    if INDEX_HTML.exists():
+        return FileResponse(INDEX_HTML)
+    return JSONResponse(
+        {"detail": "Frontend index.html not found. Put it in backend/frontend/index.html"},
+        status_code=404,
+    )
+
+# (опционально) отдать любые файлы из frontend по /static/...
+# если у тебя всё в одном index.html — всё равно можно оставить, не мешает
+if FRONTEND_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
+
+
+@app.get("/health")
+async def health():
+    return {
+        "ok": True,
+        "phase": phase,
+        "round": round_number,
+        "holders": len(holders),
+        "time_left": time_left,
+    }
+
+
+# ---------------- Helpers ----------------
 def load_json(path: Path, default):
     try:
         if path.exists():
@@ -52,9 +94,12 @@ def load_config():
     ex = load_json(EXCLUDE_PATH, {"exclude": []})
 
     exclude_set = set(ex.get("exclude", []))
+
+    # dev_wallet тоже исключаем
     if cfg.get("dev_wallet"):
         exclude_set.add(cfg["dev_wallet"])
 
+    # длительность раунда и интервал снапшота из конфига
     ROUND_DURATION = int(cfg.get("round_duration", 300))
     SNAPSHOT_INTERVAL = float(cfg.get("snapshot_interval_sec", 0.2))
 
@@ -75,7 +120,8 @@ def compute_holders_snapshot() -> list[dict]:
     )
     t22_map = parse_accounts_to_holders(t22_accounts)
 
-    combined = {}
+    combined: dict[str, int] = {}
+
     for owner, amt in spl_map.items():
         combined[owner] = combined.get(owner, 0) + int(amt)
     for owner, amt in t22_map.items():
@@ -89,22 +135,54 @@ def compute_holders_snapshot() -> list[dict]:
             continue
         if raw_amt <= 0:
             continue
-        out.append({
-            "address": owner,
-            "balance": int(raw_amt // div),   # <-- integer balance
-        })
+        out.append(
+            {
+                "address": owner,
+                "balance": int(raw_amt // div),  # integer balance
+            }
+        )
 
     out.sort(key=lambda x: x["balance"], reverse=True)
     return out
 
 
+# ---------------- Loops ----------------
 async def snapshot_loop():
-    global holders
+    """
+    Обновляем holders.
+    Если Helius начинает 429 (Too Many Requests) — включаем backoff, чтобы сервис не умирал.
+    """
+    global holders, _snapshot_backoff_sec
+
     while True:
         try:
+            # backoff если был 429 ранее
+            if _snapshot_backoff_sec > 0:
+                await asyncio.sleep(_snapshot_backoff_sec)
+
             holders = compute_holders_snapshot()
+
+            # если всё ок — постепенно отпускаем backoff
+            if _snapshot_backoff_sec > 0:
+                _snapshot_backoff_sec = max(0.0, _snapshot_backoff_sec * 0.5)
+
         except Exception as e:
-            print("[SNAPSHOT ERROR]", repr(e))
+            msg = repr(e)
+            print("[SNAPSHOT ERROR]", msg)
+
+            # очень частая причина на проде — 429 от Helius
+            if "429" in msg or "Too Many Requests" in msg:
+                # экспоненциальный backoff: 1s -> 2s -> 4s -> 8s ...
+                if _snapshot_backoff_sec <= 0:
+                    _snapshot_backoff_sec = 1.0
+                else:
+                    _snapshot_backoff_sec = min(_snapshot_backoff_sec * 2.0, _snapshot_backoff_max)
+
+                print(f"[SNAPSHOT] rate-limited, backoff={_snapshot_backoff_sec:.1f}s")
+            else:
+                # на любые другие ошибки — небольшой сон, чтобы не крутиться в 100% CPU
+                await asyncio.sleep(0.5)
+
         await asyncio.sleep(SNAPSHOT_INTERVAL)
 
 
@@ -160,7 +238,7 @@ async def broadcast_loop():
         dead = set()
         msg = json.dumps(payload)
 
-        for ws in clients:
+        for ws in list(clients):
             try:
                 await ws.send_text(msg)
             except Exception:
@@ -172,6 +250,7 @@ async def broadcast_loop():
         await asyncio.sleep(0.2)
 
 
+# ---------------- WebSocket ----------------
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket):
     await ws.accept()
@@ -179,7 +258,7 @@ async def ws_endpoint(ws: WebSocket):
 
     try:
         while True:
-            # we don't require client messages
+            # фронт шлёт ping — оставляем receive, чтобы соединение не висело "мертвым"
             await ws.receive_text()
     except WebSocketDisconnect:
         clients.discard(ws)
@@ -187,6 +266,7 @@ async def ws_endpoint(ws: WebSocket):
         clients.discard(ws)
 
 
+# ---------------- Startup ----------------
 @app.on_event("startup")
 async def startup():
     global decimals, time_left
