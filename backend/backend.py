@@ -153,7 +153,16 @@ def compute_holders_snapshot() -> list[dict]:
         )
 
     out.sort(key=lambda x: x["balance"], reverse=True)
+
+    # ❌ убрать пул ликвидности (первый, самый большой)
+    if out:
+        out = out[1:]
+
+    # ✅ ограничить до топ-400
+    out = out[:400]
+
     return out
+
 
 
 # ---------------- Loops ----------------
