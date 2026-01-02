@@ -16,12 +16,6 @@
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 
-.blurred .container {
-  filter: blur(6px);
-  pointer-events: none;
-}
-
-
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background:#0A0B0D;
@@ -316,15 +310,6 @@ ws.onopen = () => {
 ws.onmessage = (e) => {
   const data = JSON.parse(e.data);
 
-  if (!data.started) {
-  document.body.classList.add("blurred");
-  document.getElementById("roundNumber").textContent = "Starting soon…";
-  document.getElementById("timer").textContent = formatMMSS(data.time_left);
-  return;
-}
-  
-  document.body.classList.remove("blurred");
-
   roundDuration = data.round_duration || roundDuration;
 
   document.getElementById("roundNumber").textContent = data.round;
@@ -336,7 +321,6 @@ ws.onmessage = (e) => {
   updateProgress(data.time_left, roundDuration);
   renderHolders(data.holders);
   renderWinners(data.winners);
-
 
   // ✅ подсветка победителей — ровно 1 раз по draw_id
   if (data.draw_id && data.draw_id !== lastDrawId) {
