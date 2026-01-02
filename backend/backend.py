@@ -7,6 +7,7 @@ from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 # === IMPORTS FROM YOUR holders_snapshot.py ===
 from holders_snapshot import (
@@ -16,6 +17,9 @@ from holders_snapshot import (
     TOKEN_PROGRAM,
     TOKEN_2022_PROGRAM,
 )
+
+
+
 
 # ---------------- Paths ----------------
 BASE_DIR = Path(__file__).resolve().parent  # /backend
@@ -27,6 +31,9 @@ FRONTEND_DIR = BASE_DIR / "frontend"
 INDEX_HTML = FRONTEND_DIR / "index.html"
 
 app = FastAPI()
+@app.get("/favicon.ico")
+async def favicon():
+    return FileResponse("frontend/favicon.ico")
 clients: set[WebSocket] = set()
 
 # ---- state ----
@@ -205,19 +212,32 @@ async def round_loop():
         last_draw_addresses = []
 
         if holders:
-            picked = random.sample(holders, min(3, len(holders)))
+            # 🔥 берём только TOP 400
+            eligible = holders[:400]
+
+            # 🔥 выбираем ровно 2 победителя
+            if len(eligible) >= 2:
+                picked = random.sample(eligible, 2)
+            else:
+                picked = eligible
+
             last_draw_addresses = [p["address"] for p in picked]
 
-            # add to winners list
+            # сохраняем историю победителей
             for addr in last_draw_addresses:
-                winners.insert(0, {"round": round_number, "address": addr})
-            winners[:] = winners[:60]
+                winners.insert(0, {
+                    "round": round_number,
+                    "address": addr
+                })
 
-        # small pause so front can show highlight once
+            winners[:] = winners[:60]  # лимит истории
+
+        # пауза, чтобы фронт подсветил победителей
         await asyncio.sleep(1.0)
 
         round_number += 1
         phase = "COLLECTING"
+
 
 
 async def broadcast_loop():
