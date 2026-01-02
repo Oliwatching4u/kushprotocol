@@ -8,10 +8,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="icon" href="/favicon.ico" type="image/x-icon">
-
-
-
 
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -225,6 +221,38 @@ h1 {
   background: linear-gradient(180deg, rgba(139,92,246,.8), rgba(59,130,246,.8));
   border-radius: 10px;
 }
+
+/* ===== STARTUP OVERLAY (DELAYED START) ===== */
+#startupOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 11, 13, 0.85);
+  backdrop-filter: blur(12px);
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.startup-box {
+  text-align: center;
+}
+
+.startup-title {
+  font-size: 1.1rem;
+  color: #9CA3AF;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.startup-timer {
+  font-size: 3.2rem;
+  font-family: 'Space Mono', monospace;
+  background: linear-gradient(135deg,#8B5CF6,#3B82F6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
 </style>
 </head>
 
@@ -280,16 +308,17 @@ h1 {
 
 </div>
 
+<!-- delayed start overlay -->
+<div id="startupOverlay">
+  <div class="startup-box">
+    <div class="startup-title">Protocol starting in</div>
+    <div class="startup-timer" id="startupTimer">—</div>
+  </div>
+</div>
+
 <script>
-
-const proto = location.protocol === "https:" ? "wss" : "ws";
-const WS_URL = `${proto}://${location.host}/ws`;
-
-console.log("WS_URL =", WS_URL);
-
+const WS_URL = "ws://localhost:8000/ws";
 const ws = new WebSocket(WS_URL);
-
-
 
 const holdersGrid = document.getElementById("holdersGrid");
 const winnersList = document.getElementById("winnersList");
@@ -309,6 +338,18 @@ ws.onopen = () => {
 
 ws.onmessage = (e) => {
   const data = JSON.parse(e.data);
+
+  // --- delayed start overlay ---
+  if (data.started === false || data.started === 0) {
+    const ov = document.getElementById("startupOverlay");
+    const t = document.getElementById("startupTimer");
+    if (ov) ov.style.display = "flex";
+    if (t) t.textContent = typeof data.start_in === "number" ? `${Math.max(0, data.start_in)}s` : "—";
+    return;
+  } else {
+    const ov = document.getElementById("startupOverlay");
+    if (ov) ov.style.display = "none";
+  }
 
   roundDuration = data.round_duration || roundDuration;
 
