@@ -20,6 +20,11 @@ EXCLUDE_PATH = BASE_DIR / "exclude_addresses.json"
 FRONTEND_DIR = BASE_DIR / "frontend"
 
 app = FastAPI()
+
+@app.get("/")
+async def root():
+    return FileResponse(FRONTEND_DIR / "index.html")
+
 clients: set[WebSocket] = set()
 
 # ---- state ----
