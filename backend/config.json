@@ -1,6 +1,6 @@
 {
   "rpc_url": "https://mainnet.helius-rpc.com/?api-key=f97889dc-c388-4474-82b7-7d93e15bec31",
-  "mint": "DFVDG99iNbFr29YXB9rbMkakxExeDdFMxBXKurEopump",
+  "mint": "FCRx1xGyeFCgtYQYp6fLHVDhZ2p5VCHNiu5dAT2B8dWm",
   "dev_wallet": "FCRx1xGyeFCgtYQYp6fLHVDhZ2p5VCHNiu5dAT2B8dWm",
   "round_duration": 420,
   "snapshot_interval_sec": 0.2
