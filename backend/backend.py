@@ -52,6 +52,9 @@ decimals: int = 0
 ROUND_DURATION: int = 15
 SNAPSHOT_INTERVAL: float = 0.2
 
+START_DELAY_SECONDS = 60  # ← задержка старта (можешь поставить 30, 120, etc)
+
+
 # анти-429/backoff
 _snapshot_backoff_sec: float = 0.0
 _snapshot_backoff_max: float = 30.0
@@ -269,6 +272,15 @@ async def broadcast_loop():
 
         await asyncio.sleep(0.2)
 
+async def delayed_start():
+    print(f"[BOOT] Delayed start: waiting {START_DELAY_SECONDS} seconds")
+    await asyncio.sleep(START_DELAY_SECONDS)
+
+    print("[BOOT] Starting snapshot + round loops")
+    asyncio.create_task(snapshot_loop())
+    asyncio.create_task(round_loop())
+
+
 
 # ---------------- WebSocket ----------------
 @app.websocket("/ws")
@@ -297,6 +309,6 @@ async def startup():
     # decimals once
     decimals = get_mint_decimals_via_accountinfo(cfg["rpc_url"], cfg["mint"])
 
-    asyncio.create_task(snapshot_loop())
-    asyncio.create_task(round_loop())
+    asyncio.create_task(delayed_start())
     asyncio.create_task(broadcast_loop())
+
